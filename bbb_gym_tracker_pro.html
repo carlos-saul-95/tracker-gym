@@ -1,0 +1,2288 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BBB Tracker" />
+  <meta name="theme-color" content="#09090b" />
+  <title>BBB Gym Tracker — 5/3/1 Boring But Big</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              850: '#1f1f23',
+              925: '#121215',
+              950: '#09090b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Prevención de zoom en iOS Safari y optimización táctil */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    input, select, textarea, button {
+      font-size: 16px !important;
+    }
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      overscroll-behavior-y: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* Scrollbars ocultos pero funcionales para chips y tablas */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Safe areas para iPhone con Notch / Dynamic Island */
+    .safe-top {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
+    .safe-bottom {
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-zinc-950 text-zinc-100 antialiased selection:bg-emerald-500 selection:text-zinc-950">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 safe-top px-4 pb-3">
+    <div class="max-w-lg mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-950/50">
+          <i data-lucide="dumbbell" class="w-5 h-5 text-zinc-950 stroke-[2.5]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-base tracking-tight text-white leading-none">BBB TRACKER</h1>
+            <span id="header-next-badge" class="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              Ronda #1
+            </span>
+          </div>
+          <p id="header-subtitle" class="text-xs text-zinc-400 mt-0.5">Rotación continua 4 días • 3x/sem</p>
+        </div>
+      </div>
+
+      <!-- Selector global de incremento (Step kg) -->
+      <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+        <span class="text-[10px] uppercase tracking-wider text-zinc-400 px-1.5 font-semibold">Paso</span>
+        <button onclick="App.setWeightStep(1.25)" id="step-btn-1.25" class="step-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold transition-all">1.25</button>
+        <button onclick="App.setWeightStep(2.5)" id="step-btn-2.5" class="step-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold transition-all">2.5</button>
+        <button onclick="App.setWeightStep(5)" id="step-btn-5" class="step-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold transition-all">5</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main id="main-content" class="flex-1 max-w-lg w-full mx-auto px-3.5 pt-3 pb-36">
+    
+    <!-- VISTA 1: ENTRENAR (WORKOUT) -->
+    <section id="view-workout" class="space-y-4">
+      
+      <!-- Selector de Día (A / B / C / D) con indicador de "Siguiente" -->
+      <div class="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-2 shadow-inner">
+        <div class="grid grid-cols-4 gap-1.5" id="day-selector-grid">
+          <!-- Renderizado dinámico JS -->
+        </div>
+      </div>
+
+      <!-- Barra de resumen de la sesión activa -->
+      <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl px-4 py-3 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 id="active-day-title" class="font-bold text-base text-white">Día A: Sentadilla</h2>
+          </div>
+          <p id="active-day-last-date" class="text-xs text-zinc-400 mt-0.5">Última vez: Sin registros previos</p>
+        </div>
+        <div class="text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <span id="session-progress-text" class="font-mono text-sm font-bold text-emerald-400">0/23</span>
+            <span class="text-xs text-zinc-400">series</span>
+          </div>
+          <div class="w-24 h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1.5">
+            <div id="session-progress-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de tarjetas de ejercicios del día -->
+      <div id="exercises-container" class="space-y-4">
+        <!-- Renderizado dinámico JS -->
+      </div>
+
+      <!-- Nota general de la sesión y botón Finalizar Entrenamiento -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <label for="session-general-note" class="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i>
+            Nota general del entrenamiento (opcional)
+          </label>
+          <button onclick="App.resetActiveDraft()" class="text-xs text-zinc-400 hover:text-rose-400 flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-zinc-800 transition-colors">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reiniciar series
+          </button>
+        </div>
+        <input
+          id="session-general-note"
+          type="text"
+          placeholder="Ej. Dormí bien, buena energía, gimnasio lleno..."
+          oninput="App.updateGeneralNote(this.value)"
+          class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/60"
+        />
+        <button
+          onclick="App.finishWorkoutSession()"
+          class="w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-[0.99] text-zinc-950 font-extrabold text-base shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 transition-all"
+        >
+          <i data-lucide="check-circle-2" class="w-5 h-5 stroke-[2.5]"></i>
+          <span>Guardar Sesión y Avanzar Rotación</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- VISTA 2: HISTORIAL Y PLANILLA EXCEL (HISTORY) -->
+    <section id="view-history" class="hidden space-y-4">
+      <!-- Sub-navegación Historial: Vista Excel vs Lista de Sesiones -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-1.5 flex gap-1.5">
+        <button onclick="App.setHistorySubView('matrix')" id="hist-tab-matrix" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all bg-zinc-800 text-white shadow">
+          <i data-lucide="table-2" class="w-4 h-4 text-emerald-400"></i>
+          Planilla por Rondas (Excel)
+        </button>
+        <button onclick="App.setHistorySubView('list')" id="hist-tab-list" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all text-zinc-400">
+          <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+          Sesiones Detalladas
+        </button>
+      </div>
+
+      <!-- Filtro por Día en la Vista Matriz Excel -->
+      <div id="matrix-day-filter" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+        <button onclick="App.setMatrixFilterDay('ALL')" id="matrix-filter-ALL" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0">Todos (A-D)</button>
+        <button onclick="App.setMatrixFilterDay('A')" id="matrix-filter-A" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0">Día A (Sentadilla)</button>
+        <button onclick="App.setMatrixFilterDay('B')" id="matrix-filter-B" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0">Día B (Banca)</button>
+        <button onclick="App.setMatrixFilterDay('C')" id="matrix-filter-C" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0">Día C (Peso Muerto)</button>
+        <button onclick="App.setMatrixFilterDay('D')" id="matrix-filter-D" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0">Día D (Militar)</button>
+      </div>
+
+      <!-- Contenedor Matriz estilo Excel -->
+      <div id="history-matrix-container" class="space-y-4">
+        <!-- Renderizado dinámico JS -->
+      </div>
+
+      <!-- Contenedor Lista Cronológica de Sesiones -->
+      <div id="history-list-container" class="hidden space-y-3">
+        <!-- Renderizado dinámico JS -->
+      </div>
+    </section>
+
+    <!-- VISTA 3: PESO CORPORAL (BODYWEIGHT) -->
+    <section id="view-bodyweight" class="hidden space-y-4">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-base text-white flex items-center gap-2">
+              <i data-lucide="scale" class="w-5 h-5 text-emerald-400"></i>
+              Registro de Peso Corporal
+            </h2>
+            <p class="text-xs text-zinc-400 mt-0.5">Monitorea tu evolución junto con la fuerza</p>
+          </div>
+          <div id="bw-current-badge" class="text-right">
+            <!-- JS -->
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-2 pt-1">
+          <div class="col-span-5">
+            <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Fecha</label>
+            <input type="date" id="bw-date-input" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div class="col-span-4">
+            <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Peso (kg)</label>
+            <input type="number" step="0.1" inputmode="decimal" id="bw-weight-input" placeholder="78.5" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 font-mono text-zinc-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div class="col-span-3 flex items-end">
+            <button onclick="App.addBodyweightEntry()" class="w-full h-[46px] bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-zinc-950 font-bold rounded-xl flex items-center justify-center gap-1 shadow-md transition-all">
+              <i data-lucide="plus" class="w-5 h-5 stroke-[2.5]"></i>
+              <span>Guardar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historial de Peso Corporal -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Historial de Pesajes</h3>
+          <span id="bw-total-count" class="text-xs font-mono text-zinc-400">0 registros</span>
+        </div>
+        <div id="bw-history-list" class="divide-y divide-zinc-800/70">
+          <!-- JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA 4: DATOS Y BACKUP (SETTINGS / BACKUP) -->
+    <section id="view-settings" class="hidden space-y-4">
+      <!-- Estado de rotación -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <h2 class="font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="refresh-cw" class="w-5 h-5 text-emerald-400"></i>
+          Control de Rotación & Tiempos
+        </h2>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          La rutina BBB rota continuamente entre los 4 días (A → B → C → D) entrenando 3 días por semana. Puedes ajustar manualmente cuál es el próximo día sugerido.
+        </p>
+        <div class="flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+          <span class="text-xs font-semibold text-zinc-300">Siguiente Día en Cola:</span>
+          <div class="flex gap-1.5" id="settings-next-day-btns">
+            <!-- JS -->
+          </div>
+        </div>
+        <div class="flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+          <div>
+            <span class="text-xs font-semibold text-zinc-300 block">Sonido al terminar descanso</span>
+            <span class="text-[11px] text-zinc-400">Beep por Web Audio API (no interrumpe Spotify)</span>
+          </div>
+          <button onclick="App.toggleSound()" id="sound-toggle-btn" class="px-3.5 py-2 rounded-xl text-xs font-bold border transition-all">
+            Activado
+          </button>
+        </div>
+      </div>
+
+      <!-- Respaldo JSON (Exportar / Importar) -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <h2 class="font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="database-backup" class="w-5 h-5 text-emerald-400"></i>
+          Backup y Portabilidad (JSON)
+        </h2>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          Todos tus datos se guardan al instante en el almacenamiento local de tu teléfono (<code class="text-zinc-300">localStorage</code>). Descarga una copia de seguridad periódicamente o impórtala en otro dispositivo.
+        </p>
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <button onclick="App.exportBackupJSON()" class="py-3 px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Exportar Backup
+          </button>
+          <label class="py-3 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            Importar JSON
+            <input type="file" accept=".json,application/json" onchange="App.importBackupJSON(event)" class="hidden" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Datos de demostración / Reset -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+        <h2 class="font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-5 h-5 text-amber-400"></i>
+          Datos de Ejemplo & Reinicio
+        </h2>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          ¿Quieres ver cómo luce la tabla comparativa de rondas estilo Excel con varias semanas cargadas o borrar todo para empezar desde cero?
+        </p>
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <button onclick="App.loadDemoHistory()" class="py-3 px-4 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="wand-2" class="w-4 h-4"></i>
+            Cargar Rondas Demo
+          </button>
+          <button onclick="App.openConfirmResetModal()" class="py-3 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Borrar Todo
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BARRA FLOTANTE DEL TEMPORIZADOR DE DESCANSO -->
+  <div id="rest-timer-bar" class="fixed bottom-[72px] inset-x-0 z-40 px-3 pointer-events-none hidden">
+    <div class="max-w-lg mx-auto bg-zinc-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl p-3 shadow-2xl shadow-black/90 pointer-events-auto">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <div id="timer-icon-box" class="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+            <i data-lucide="timer" class="w-6 h-6 text-emerald-400"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="timer-display" class="font-mono font-extrabold text-2xl text-white tracking-tight">03:00</span>
+              <span id="timer-label-badge" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">Fuerza</span>
+            </div>
+            <p id="timer-exercise-name" class="text-xs text-zinc-400 truncate max-w-[160px]">Descanso activo</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button onclick="App.adjustTimer(-30)" class="px-2.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-xs font-mono font-bold text-zinc-200 border border-zinc-700">
+            -30s
+          </button>
+          <button onclick="App.adjustTimer(30)" class="px-2.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-xs font-mono font-bold text-zinc-200 border border-zinc-700">
+            +30s
+          </button>
+          <button onclick="App.stopTimer()" class="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 active:scale-95 text-rose-300 border border-rose-500/30" title="Saltar descanso">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Barra de progreso del timer -->
+      <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-2.5">
+        <div id="timer-progress-bar" class="h-full bg-emerald-400 transition-all duration-300" style="width: 100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 inset-x-0 z-30 bg-zinc-950/95 backdrop-blur-lg border-t border-zinc-800/80 safe-bottom">
+    <div class="max-w-lg mx-auto grid grid-cols-4 px-2 pt-1.5">
+      <button onclick="App.switchTab('workout')" id="nav-workout" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-emerald-400 transition-colors">
+        <i data-lucide="Flame" class="w-5 h-5"></i>
+        <span class="text-[11px] font-bold mt-1">Entrenar</span>
+      </button>
+      <button onclick="App.switchTab('history')" id="nav-history" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors">
+        <i data-lucide="table" class="w-5 h-5"></i>
+        <span class="text-[11px] font-semibold mt-1">Rondas</span>
+      </button>
+      <button onclick="App.switchTab('bodyweight')" id="nav-bodyweight" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors">
+        <i data-lucide="scale" class="w-5 h-5"></i>
+        <span class="text-[11px] font-semibold mt-1">Peso Corp.</span>
+      </button>
+      <button onclick="App.switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors">
+        <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+        <span class="text-[11px] font-semibold mt-1">Backup</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL 1: EDICIÓN MANUAL DE PESO Y REPS (SOLO SI EL USUARIO TOCA EL NÚMERO) -->
+  <div id="modal-manual-edit" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 id="manual-modal-title" class="font-bold text-base text-white">Editar Serie</h3>
+          <p id="manual-modal-subtitle" class="text-xs text-zinc-400">Ajuste directo de carga y repeticiones</p>
+        </div>
+        <button onclick="App.closeManualEditModal()" class="p-1.5 rounded-lg text-zinc-400 hover:text-white bg-zinc-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1.5">Peso (kg)</label>
+          <input id="manual-weight-input" type="number" step="0.25" inputmode="decimal" class="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3.5 py-3 font-mono font-bold text-lg text-white text-center focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-zinc-400 mb-1.5">Repeticiones</label>
+          <input id="manual-reps-input" type="number" step="1" inputmode="numeric" class="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-3.5 py-3 font-mono font-bold text-lg text-white text-center focus:outline-none focus:border-emerald-500" />
+        </div>
+      </div>
+
+      <div id="manual-propagate-container" class="flex items-center gap-2.5 bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+        <input id="manual-propagate-checkbox" type="checkbox" class="w-5 h-5 rounded accent-emerald-500" />
+        <label for="manual-propagate-checkbox" class="text-xs text-zinc-300 font-medium cursor-pointer">
+          Aplicar este peso y reps a las demás series pendientes de este ejercicio
+        </label>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button onclick="App.closeManualEditModal()" class="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-sm">
+          Cancelar
+        </button>
+        <button onclick="App.saveManualEditModal()" class="flex-1 py-3 rounded-xl bg-emerald-500 text-zinc-950 font-extrabold text-sm">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: CAMBIAR VARIACIÓN DE EJERCICIO DE ASISTENCIA -->
+  <div id="modal-variant-picker" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Flexibilidad en Asistencias</span>
+          <h3 class="font-bold text-base text-white">Cambiar variante del ejercicio</h3>
+          <p class="text-xs text-zinc-400">Cada variante guarda su propio historial y último peso de forma independiente.</p>
+        </div>
+        <button onclick="App.closeVariantModal()" class="p-1.5 rounded-lg text-zinc-400 hover:text-white bg-zinc-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Lista de variantes sugeridas -->
+      <div id="variant-options-list" class="space-y-2 overflow-y-auto pr-1 flex-1">
+        <!-- JS -->
+      </div>
+
+      <!-- Agregar variante personalizada -->
+      <div class="pt-2 border-t border-zinc-800 space-y-2">
+        <label class="block text-xs font-semibold text-zinc-400">¿Usas otra máquina o variante personalizada?</label>
+        <div class="flex gap-2">
+          <input id="custom-variant-input" type="text" placeholder="Ej. Remo T con apoyo al pecho..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500" />
+          <button onclick="App.addCustomVariant()" class="px-4 py-2.5 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-xs shrink-0">
+            Usar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: CONFIRMACIÓN PERSONALIZADA (SIN USAR ALERT/CONFIRM NATIVO) -->
+  <div id="modal-confirm" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>
+        </div>
+        <div>
+          <h3 id="confirm-modal-title" class="font-bold text-base text-white">Confirmar acción</h3>
+          <p id="confirm-modal-message" class="text-xs text-zinc-400 mt-1 leading-relaxed"></p>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="App.closeConfirmModal()" class="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-xs">
+          Cancelar
+        </button>
+        <button id="confirm-modal-action-btn" class="flex-1 py-2.5 rounded-xl bg-emerald-500 text-zinc-950 font-extrabold text-xs">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-container" class="fixed top-16 inset-x-0 z-50 flex justify-center px-4 pointer-events-none hidden">
+    <div class="bg-zinc-900/95 backdrop-blur-md border border-emerald-500/40 text-zinc-100 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold">
+      <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+      <span id="toast-message">Guardado</span>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT MODULAR VANILLA -->
+  <script>
+    const App = (() => {
+      const STORAGE_KEY = 'bbb_gym_tracker_v2_state';
+
+      // Chips rápidos para notas por ejercicio (Zero Friction)
+      const QUICK_NOTE_CHIPS = [
+        'Subir próxima 📈',
+        'Flojo / Mantener ⚖️',
+        'Pesado / Costó 🔥',
+        'Barra de 20kg',
+        'Barra de 15kg',
+        'Buena técnica ✅',
+        'Con cinturón'
+      ];
+
+      // Definición Maestra del Programa Boring But Big (4 Días rotativos)
+      const PROGRAM_DAYS = {
+        A: {
+          id: 'A',
+          shortTitle: 'Día A',
+          name: 'Día A: Sentadilla & Calistenia',
+          focus: 'Sentadilla',
+          slots: [
+            {
+              slotId: 'A1',
+              type: 'strength',
+              badge: 'Fuerza 3×5',
+              restSeconds: 180,
+              setsCount: 3,
+              targetReps: 5,
+              defaultVariant: 'Sentadilla con barra (Fuerza)',
+              variants: ['Sentadilla con barra (Fuerza)', 'Sentadilla Barra Baja (Fuerza)', 'Sentadilla Frontal (Fuerza)'],
+              defaultWeights: [60, 65, 70]
+            },
+            {
+              slotId: 'A2',
+              type: 'bbb',
+              badge: 'BBB 5×10',
+              restSeconds: 105,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Sentadilla BBB',
+              variants: ['Sentadilla BBB', 'Sentadilla Frontal BBB', 'Prensa 45° BBB', 'Sentadilla Hack BBB'],
+              defaultWeights: [42.5, 42.5, 42.5, 42.5, 42.5]
+            },
+            {
+              slotId: 'A3',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Dominadas o Jalón al pecho',
+              variants: ['Dominadas o Jalón al pecho', 'Jalón al pecho prono', 'Dominadas libres / lastre', 'Jalón agarre neutro'],
+              defaultWeights: [45, 45, 45, 45, 45]
+            },
+            {
+              slotId: 'A4',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Fondos o Flexiones',
+              variants: ['Fondos o Flexiones', 'Fondos en paralelas', 'Flexiones de brazos', 'Press banca agarre cerrado', 'Máquina de fondos'],
+              defaultWeights: [0, 0, 0, 0, 0]
+            },
+            {
+              slotId: 'A5',
+              type: 'core',
+              badge: 'Core 5×50',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 50,
+              defaultVariant: 'Abdominales',
+              variants: ['Abdominales', 'Crunch abdominal en colchoneta', 'Abdominales en polea alta', 'Rueda abdominal (Ab Wheel)'],
+              defaultWeights: [0, 0, 0, 0, 0]
+            }
+          ]
+        },
+        B: {
+          id: 'B',
+          shortTitle: 'Día B',
+          name: 'Día B: Press de Banca & Torso',
+          focus: 'Banca',
+          slots: [
+            {
+              slotId: 'B1',
+              type: 'strength',
+              badge: 'Fuerza 3×5',
+              restSeconds: 180,
+              setsCount: 3,
+              targetReps: 5,
+              defaultVariant: 'Press de Banca (Fuerza)',
+              variants: ['Press de Banca (Fuerza)', 'Press de Banca con Pausa (Fuerza)', 'Press de Banca c/ Mancuernas (Fuerza)'],
+              defaultWeights: [50, 52.5, 55]
+            },
+            {
+              slotId: 'B2',
+              type: 'bbb',
+              badge: 'BBB 5×10',
+              restSeconds: 105,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Press de Banca BBB',
+              variants: ['Press de Banca BBB', 'Press Banca con Mancuernas BBB', 'Press en Máquina Convergente BBB'],
+              defaultWeights: [37.5, 37.5, 37.5, 37.5, 37.5]
+            },
+            {
+              slotId: 'B3',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Remo con mancuerna o barra',
+              variants: ['Remo con mancuerna o barra', 'Remo con mancuerna a 1 brazo', 'Remo con barra Pendlay / 45°', 'Remo en máquina con apoyo'],
+              defaultWeights: [22.5, 22.5, 22.5, 22.5, 22.5]
+            },
+            {
+              slotId: 'B4',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Press inclinado c/ mancuernas',
+              variants: ['Press inclinado c/ mancuernas', 'Press inclinado con barra', 'Press inclinado en multipower / máquina', 'Cruces en polea'],
+              defaultWeights: [17.5, 17.5, 17.5, 17.5, 17.5]
+            },
+            {
+              slotId: 'B5',
+              type: 'assist',
+              badge: 'Pierna Unilat. 5×10/lado',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Zancadas / Desplantes (x lado)',
+              variants: ['Zancadas / Desplantes (x lado)', 'Zancadas caminando c/ mancuernas', 'Desplantes estáticos', 'Prensa unilateral'],
+              defaultWeights: [12.5, 12.5, 12.5, 12.5, 12.5]
+            }
+          ]
+        },
+        C: {
+          id: 'C',
+          shortTitle: 'Día C',
+          name: 'Día C: Peso Muerto & Brazos',
+          focus: 'Peso Muerto',
+          slots: [
+            {
+              slotId: 'C1',
+              type: 'strength',
+              badge: 'Fuerza 3×5',
+              restSeconds: 210,
+              setsCount: 3,
+              targetReps: 5,
+              defaultVariant: 'Peso Muerto (Fuerza)',
+              variants: ['Peso Muerto (Fuerza)', 'Peso Muerto Sumo (Fuerza)', 'Peso Muerto Barra Hexagonal (Fuerza)'],
+              defaultWeights: [80, 85, 90]
+            },
+            {
+              slotId: 'C2',
+              type: 'bbb',
+              badge: 'BBB 5×10',
+              restSeconds: 120,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Peso Muerto BBB',
+              variants: ['Peso Muerto BBB', 'Peso Muerto Rumano (RDL) BBB', 'Buenos Días / Hip Thrust BBB'],
+              defaultWeights: [55, 55, 55, 55, 55]
+            },
+            {
+              slotId: 'C3',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Curl c/ mancuernas sentado',
+              variants: ['Curl c/ mancuernas sentado', 'Curl con barra EZ / recta', 'Curl martillo con mancuernas', 'Curl en polea baja'],
+              defaultWeights: [12.5, 12.5, 12.5, 12.5, 12.5]
+            },
+            {
+              slotId: 'C4',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Extensión tríceps en polea',
+              variants: ['Extensión tríceps en polea', 'Extensión tríceps con soga', 'Press francés con barra EZ', 'Extensión trasnuca c/ mancuerna'],
+              defaultWeights: [25, 25, 25, 25, 25]
+            },
+            {
+              slotId: 'C5',
+              type: 'core',
+              badge: 'Core 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Elevaciones de piernas colgado',
+              variants: ['Elevaciones de piernas colgado', 'Elevaciones de rodillas en silla romana', 'Crunch inverso en banco', 'Plancha abdominal (seg)'],
+              defaultWeights: [0, 0, 0, 0, 0]
+            }
+          ]
+        },
+        D: {
+          id: 'D',
+          shortTitle: 'Día D',
+          name: 'Día D: Press Militar & Hombro/Pierna',
+          focus: 'Press Militar',
+          slots: [
+            {
+              slotId: 'D1',
+              type: 'strength',
+              badge: 'Fuerza 3×5',
+              restSeconds: 180,
+              setsCount: 3,
+              targetReps: 5,
+              defaultVariant: 'Press Militar de pie (Fuerza)',
+              variants: ['Press Militar de pie (Fuerza)', 'Press Militar sentado c/ barra (Fuerza)', 'Push Press (Fuerza)'],
+              defaultWeights: [30, 32.5, 35]
+            },
+            {
+              slotId: 'D2',
+              type: 'bbb',
+              badge: 'BBB 5×10',
+              restSeconds: 90,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Press Militar BBB',
+              variants: ['Press Militar BBB', 'Press de Hombros c/ Mancuernas BBB', 'Press Arnold sentado BBB'],
+              defaultWeights: [22.5, 22.5, 22.5, 22.5, 22.5]
+            },
+            {
+              slotId: 'D3',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Remo en polea baja',
+              variants: ['Remo en polea baja', 'Remo Gironda agarre estrecho', 'Remo en polea agarre ancho', 'Face Pulls en polea'],
+              defaultWeights: [45, 45, 45, 45, 45]
+            },
+            {
+              slotId: 'D4',
+              type: 'assist',
+              badge: 'Asistencia 5×10',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Elevaciones laterales',
+              variants: ['Elevaciones laterales', 'Elevaciones laterales en polea', 'Pájaros / Posteriores c/ mancuernas', 'Remo al mentón'],
+              defaultWeights: [10, 10, 10, 10, 10]
+            },
+            {
+              slotId: 'D5',
+              type: 'assist',
+              badge: 'Pierna Unilat. 5×10/lado',
+              restSeconds: 60,
+              setsCount: 5,
+              targetReps: 10,
+              defaultVariant: 'Sentadilla Búlgara (x lado)',
+              variants: ['Sentadilla Búlgara (x lado)', 'Sentadilla Búlgara c/ mancuernas', 'Step-ups al cajón', 'Extensión de cuádriceps'],
+              defaultWeights: [12.5, 12.5, 12.5, 12.5, 12.5]
+            }
+          ]
+        }
+      };
+
+      const DAY_ROTATION_ORDER = ['A', 'B', 'C', 'D'];
+
+      // Estado reactivo persistido en localStorage
+      let state = {
+        nextDayInRotation: 'A',     // Cuál es el siguiente día sugerido
+        currentViewingDay: 'A',     // Día seleccionado actualmente en pantalla
+        weightStep: 2.5,            // Paso de botones +/- (1.25, 2.5, 5)
+        soundEnabled: true,
+        activeTab: 'workout',
+        historySubView: 'matrix',   // 'matrix' | 'list'
+        matrixFilterDay: 'ALL',     // 'ALL' | 'A' | 'B' | 'C' | 'D'
+        selectedVariantsBySlot: {}, // { A3: 'Dominadas o Jalón al pecho', ... }
+        customVariantsBySlot: {},   // { A3: ['Mi variante'], ... }
+        exerciseHistoryByVariant: {}, // { 'Sentadilla con barra (Fuerza)': { sets: [...], note: '...', date: '...' } }
+        activeDraftsByDay: {},      // Borradores en vivo por día A, B, C, D para que nunca se pierda ni una serie marcada
+        workoutSessions: [],        // Historial completo de sesiones cerradas
+        bodyweightLogs: []          // [{ id, date, weight }]
+      };
+
+      // Variables del temporizador y modales
+      let timerInterval = null;
+      let timerRemaining = 0;
+      let timerTotal = 0;
+      let manualEditContext = null; // { dayId, slotId, setIndex }
+      let variantModalSlotId = null;
+      let audioCtx = null;
+
+      // ==========================================
+      // 1. INICIALIZACIÓN Y PERSISTENCIA
+      // ==========================================
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            state = { ...state, ...parsed };
+          } else {
+            // Inicializar con 1 ronda previa realista de referencia para que el usuario vea el formato "Última: 25-25-27.5 kg" desde el minuto 1
+            seedInitialReferenceData();
+          }
+        } catch (err) {
+          console.error('Error leyendo localStorage:', err);
+        }
+
+        // Asegurar que todos los slots tengan su variante seleccionada y su borrador activo
+        DAY_ROTATION_ORDER.forEach(dayKey => {
+          PROGRAM_DAYS[dayKey].slots.forEach(slot => {
+            if (!state.selectedVariantsBySlot[slot.slotId]) {
+              state.selectedVariantsBySlot[slot.slotId] = slot.defaultVariant;
+            }
+          });
+          if (!state.activeDraftsByDay[dayKey]) {
+            state.activeDraftsByDay[dayKey] = createDraftForDay(dayKey);
+          }
+        });
+
+        saveState();
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          console.error('Error guardando en localStorage:', err);
+        }
+      }
+
+      // Carga inicial sutil para que haya referencias de "Última sesión" inmediatamente
+      function seedInitialReferenceData() {
+        const today = new Date();
+        const fmtDate = (daysAgo) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - daysAgo);
+          return d.toISOString().split('T')[0];
+        };
+
+        // Pre-poblar historial por variante con pesos progresivos realistas en Fuerza (ej. 60-65-67.5 kg)
+        Object.values(PROGRAM_DAYS).forEach(day => {
+          day.slots.forEach(slot => {
+            const sets = slot.defaultWeights.map(w => ({ weight: w, reps: slot.targetReps, completed: true }));
+            state.exerciseHistoryByVariant[slot.defaultVariant] = {
+              sets,
+              note: slot.type === 'strength' ? 'Subir próxima 📈' : 'Buena técnica ✅',
+              date: fmtDate(4)
+            };
+          });
+        });
+
+        state.bodyweightLogs = [
+          { id: 'bw-1', date: fmtDate(7), weight: 78.2 },
+          { id: 'bw-2', date: fmtDate(1), weight: 78.5 }
+        ];
+      }
+
+      // Crea el borrador en curso de un día tomando como punto de partida la última sesión de cada variante
+      function createDraftForDay(dayKey) {
+        const dayConfig = PROGRAM_DAYS[dayKey];
+        const exercisesDraft = {};
+
+        dayConfig.slots.forEach(slot => {
+          const activeVariant = state.selectedVariantsBySlot[slot.slotId] || slot.defaultVariant;
+          const lastRecord = state.exerciseHistoryByVariant[activeVariant];
+
+          const sets = [];
+          for (let i = 0; i < slot.setsCount; i++) {
+            const fallbackWeight = slot.defaultWeights[i] !== undefined ? slot.defaultWeights[i] : slot.defaultWeights[0];
+            const prevSet = lastRecord && lastRecord.sets && lastRecord.sets[i] ? lastRecord.sets[i] : null;
+            sets.push({
+              weight: prevSet ? prevSet.weight : fallbackWeight,
+              reps: prevSet ? prevSet.reps : slot.targetReps,
+              completed: false
+            });
+          }
+
+          exercisesDraft[slot.slotId] = {
+            slotId: slot.slotId,
+            variantName: activeVariant,
+            note: lastRecord && lastRecord.note ? lastRecord.note : '',
+            sets
+          };
+        });
+
+        return {
+          dayId: dayKey,
+          generalNote: '',
+          exercises: exercisesDraft
+        };
+      }
+
+      // ==========================================
+      // 2. AUDIO NATIVO (WEB AUDIO API)
+      // ==========================================
+      function playCompletionBeep() {
+        if (!state.soundEnabled) return;
+        try {
+          if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          const now = audioCtx.currentTime;
+          // Doble beep armónico deportivo
+          [0, 0.18].forEach((offset, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(idx === 0 ? 740 : 987.77, now + offset); // F#5 -> B5
+            gain.gain.setValueAtTime(0.001, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.16);
+          });
+        } catch (e) {
+          console.warn('Web Audio API no disponible:', e);
+        }
+      }
+
+      function playCheckTick() {
+        if (!state.soundEnabled) return;
+        try {
+          if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520, now);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } catch (e) {}
+      }
+
+      // ==========================================
+      // 3. TEMPORIZADOR DE DESCANSO INTELIGENTE
+      // ==========================================
+      function startRestTimer(seconds, exerciseName, categoryLabel) {
+        if (timerInterval) clearInterval(timerInterval);
+        timerTotal = seconds;
+        timerRemaining = seconds;
+
+        const bar = document.getElementById('rest-timer-bar');
+        const labelBadge = document.getElementById('timer-label-badge');
+        const exNameEl = document.getElementById('timer-exercise-name');
+
+        bar.classList.remove('hidden');
+        labelBadge.textContent = categoryLabel;
+        exNameEl.textContent = exerciseName;
+
+        updateTimerUI();
+
+        timerInterval = setInterval(() => {
+          timerRemaining--;
+          if (timerRemaining <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerRemaining = 0;
+            updateTimerUI();
+            playCompletionBeep();
+            showToast('¡Tiempo de descanso cumplido! A darle 🔥');
+            setTimeout(() => {
+              stopTimer();
+            }, 2500);
+          } else {
+            updateTimerUI();
+          }
+        }, 1000);
+      }
+
+      function updateTimerUI() {
+        const display = document.getElementById('timer-display');
+        const progressBar = document.getElementById('timer-progress-bar');
+        const mins = Math.floor(timerRemaining / 60);
+        const secs = timerRemaining % 60;
+        display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        const pct = timerTotal > 0 ? Math.max(0, Math.min(100, (timerRemaining / timerTotal) * 100)) : 0;
+        progressBar.style.width = `${pct}%`;
+      }
+
+      function adjustTimer(deltaSeconds) {
+        if (timerRemaining <= 0 && deltaSeconds > 0) {
+          timerTotal = deltaSeconds;
+          timerRemaining = deltaSeconds;
+        } else {
+          timerRemaining = Math.max(5, timerRemaining + deltaSeconds);
+          timerTotal = Math.max(timerTotal, timerRemaining);
+        }
+        updateTimerUI();
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        document.getElementById('rest-timer-bar').classList.add('hidden');
+      }
+
+      // ==========================================
+      // 4. LÓGICA ZERO-FRICTION DE SERIES Y PESOS
+      // ==========================================
+
+      // Formatea el resumen de la última sesión (ej. "20-20-22.5 kg" o "5×10 @ 42.5 kg")
+      function formatLastSessionReference(slot, variantName) {
+        const record = state.exerciseHistoryByVariant[variantName];
+        if (!record || !record.sets || record.sets.length === 0) {
+          return 'Sin sesión previa registrada';
+        }
+        const weights = record.sets.map(s => s.weight);
+        const reps = record.sets.map(s => s.reps);
+        const allSameWeight = weights.every(w => w === weights[0]);
+        const allSameReps = reps.every(r => r === reps[0]);
+
+        if (slot.type === 'strength') {
+          // Mostrar siempre desglosado serie por serie para Fuerza 3x5: ej "60 - 65 - 70 kg (×5)"
+          return `Última: ${weights.join(' - ')} kg (${reps.join('/')}\u00A0reps)`;
+        }
+
+        if (allSameWeight && allSameReps) {
+          if (weights[0] === 0) {
+            return `Última: ${weights.length}×${reps[0]} reps (Peso corp.)`;
+          }
+          return `Última: ${weights.length}×${reps[0]} @ ${weights[0]} kg`;
+        }
+        return `Última: ${weights.join('-')} kg (${reps.join('-')} reps)`;
+      }
+
+      function setWeightStep(stepVal) {
+        state.weightStep = stepVal;
+        saveState();
+        renderHeader();
+      }
+
+      function selectWorkoutDay(dayKey) {
+        state.currentViewingDay = dayKey;
+        saveState();
+        renderWorkoutView();
+      }
+
+      // Tildar o destildar serie con un solo toque (sin abrir teclado)
+      function toggleSetComplete(dayId, slotId, setIndex) {
+        const draft = state.activeDraftsByDay[dayId];
+        const exDraft = draft.exercises[slotId];
+        const setObj = exDraft.sets[setIndex];
+        const slot = PROGRAM_DAYS[dayId].slots.find(s => s.slotId === slotId);
+
+        setObj.completed = !setObj.completed;
+        saveState();
+        renderWorkoutView();
+
+        if (setObj.completed) {
+          playCheckTick();
+          const categoryLabel = slot.type === 'strength' ? 'Fuerza' : (slot.type === 'bbb' ? 'Volumen BBB' : 'Asistencia');
+          startRestTimer(slot.restSeconds, exDraft.variantName, `${categoryLabel} • Serie ${setIndex + 1}/${slot.setsCount}`);
+        }
+      }
+
+      // Ajustar peso rápido (+/-) en una serie individual (usado en Fuerza 3x5 o serie puntual)
+      function adjustSetWeight(dayId, slotId, setIndex, direction) {
+        const draft = state.activeDraftsByDay[dayId];
+        const exDraft = draft.exercises[slotId];
+        const currentWeight = Number(exDraft.sets[setIndex].weight) || 0;
+        const nextWeight = Math.max(0, Number((currentWeight + direction * state.weightStep).toFixed(2)));
+        exDraft.sets[setIndex].weight = nextWeight;
+        saveState();
+        renderWorkoutView();
+      }
+
+      // Ajuste Maestro en 5x10 (BBB y Asistencias): propaga el peso a todas las series pendientes (o a todas si ninguna está completada)
+      function adjustExerciseBulkWeight(dayId, slotId, direction) {
+        const draft = state.activeDraftsByDay[dayId];
+        const exDraft = draft.exercises[slotId];
+        const refSet = exDraft.sets.find(s => !s.completed) || exDraft.sets[0];
+        const currentWeight = Number(refSet.weight) || 0;
+        const nextWeight = Math.max(0, Number((currentWeight + direction * state.weightStep).toFixed(2)));
+
+        const anyPending = exDraft.sets.some(s => !s.completed);
+        exDraft.sets.forEach(s => {
+          if (!anyPending || !s.completed) {
+            s.weight = nextWeight;
+          }
+        });
+
+        saveState();
+        renderWorkoutView();
+      }
+
+      // Marcar las 5 series de un bloque BBB/Asistencia de una vez o reiniciarlas
+      function completeAllSetsInExercise(dayId, slotId) {
+        const draft = state.activeDraftsByDay[dayId];
+        const exDraft = draft.exercises[slotId];
+        const allDone = exDraft.sets.every(s => s.completed);
+        exDraft.sets.forEach(s => { s.completed = !allDone; });
+        saveState();
+        renderWorkoutView();
+        if (!allDone) {
+          playCheckTick();
+        }
+      }
+
+      // Actualizar nota rápida de un ejercicio (por input o chip)
+      function updateExerciseNote(dayId, slotId, newNote) {
+        const draft = state.activeDraftsByDay[dayId];
+        draft.exercises[slotId].note = newNote;
+        saveState();
+      }
+
+      function toggleNoteChip(dayId, slotId, chipText) {
+        const draft = state.activeDraftsByDay[dayId];
+        const current = draft.exercises[slotId].note || '';
+        if (current.includes(chipText)) {
+          draft.exercises[slotId].note = current.replace(chipText, '').replace(/\s{2,}/g, ' ').trim();
+        } else {
+          draft.exercises[slotId].note = current ? `${current} • ${chipText}` : chipText;
+        }
+        saveState();
+        renderWorkoutView();
+      }
+
+      function updateGeneralNote(val) {
+        const draft = state.activeDraftsByDay[state.currentViewingDay];
+        if (draft) {
+          draft.generalNote = val;
+          saveState();
+        }
+      }
+
+      // ==========================================
+      // 5. MODAL DE EDICIÓN MANUAL (SI TOCA EL NÚMERO)
+      // ==========================================
+      function openManualEditModal(dayId, slotId, setIndex) {
+        manualEditContext = { dayId, slotId, setIndex };
+        const draft = state.activeDraftsByDay[dayId];
+        const exDraft = draft.exercises[slotId];
+        const slot = PROGRAM_DAYS[dayId].slots.find(s => s.slotId === slotId);
+        const setObj = exDraft.sets[setIndex];
+
+        document.getElementById('manual-modal-title').textContent = `${exDraft.variantName}`;
+        document.getElementById('manual-modal-subtitle').textContent = `Serie #${setIndex + 1} de ${slot.setsCount}`;
+        document.getElementById('manual-weight-input').value = setObj.weight;
+        document.getElementById('manual-reps-input').value = setObj.reps;
+        document.getElementById('manual-propagate-checkbox').checked = slot.type !== 'strength';
+
+        const modal = document.getElementById('modal-manual-edit');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeManualEditModal() {
+        const modal = document.getElementById('modal-manual-edit');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        manualEditContext = null;
+      }
+
+      function saveManualEditModal() {
+        if (!manualEditContext) return;
+        const { dayId, slotId, setIndex } = manualEditContext;
+        const weightVal = Math.max(0, parseFloat(document.getElementById('manual-weight-input').value) || 0);
+        const repsVal = Math.max(1, parseInt(document.getElementById('manual-reps-input').value, 10) || 1);
+        const propagate = document.getElementById('manual-propagate-checkbox').checked;
+
+        const draft = state.activeDraftsByDay[dayId];
+        const exDraft = draft.exercises[slotId];
+
+        exDraft.sets[setIndex].weight = weightVal;
+        exDraft.sets[setIndex].reps = repsVal;
+
+        if (propagate) {
+          exDraft.sets.forEach((s, idx) => {
+            if (idx > setIndex && !s.completed) {
+              s.weight = weightVal;
+              s.reps = repsVal;
+            }
+          });
+        }
+
+        saveState();
+        closeManualEditModal();
+        renderWorkoutView();
+      }
+
+      // ==========================================
+      // 6. CAMBIO DE VARIANTES DE ASISTENCIA
+      // ==========================================
+      function openVariantModal(slotId) {
+        variantModalSlotId = slotId;
+        const dayId = state.currentViewingDay;
+        const slot = PROGRAM_DAYS[dayId].slots.find(s => s.slotId === slotId);
+        const currentVariant = state.selectedVariantsBySlot[slotId] || slot.defaultVariant;
+        const customList = state.customVariantsBySlot[slotId] || [];
+        const allVariants = Array.from(new Set([...slot.variants, ...customList]));
+
+        const listEl = document.getElementById('variant-options-list');
+        listEl.innerHTML = allVariants.map(vName => {
+          const isSelected = vName === currentVariant;
+          const refText = formatLastSessionReference(slot, vName);
+          const safeName = vName.replace(/'/g, "\\'");
+          return `
+            <button
+              onclick="App.selectExerciseVariant('${slotId}', '${safeName}')"
+              class="w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                isSelected
+                  ? 'bg-emerald-500/15 border-emerald-500/50 text-white'
+                  : 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:border-zinc-700'
+              }"
+            >
+              <div>
+                <div class="font-bold text-sm flex items-center gap-2">
+                  <span>${vName}</span>
+                  ${isSelected ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500 text-zinc-950 font-extrabold">ACTIVO</span>' : ''}
+                </div>
+                <p class="text-xs font-mono text-zinc-400 mt-0.5">${refText}</p>
+              </div>
+              <i data-lucide="${isSelected ? 'check-circle-2' : 'chevron-right'}" class="w-5 h-5 ${isSelected ? 'text-emerald-400' : 'text-zinc-500'} shrink-0"></i>
+            </button>
+          `;
+        }).join('');
+
+        document.getElementById('custom-variant-input').value = '';
+        const modal = document.getElementById('modal-variant-picker');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        lucide.createIcons();
+      }
+
+      function closeVariantModal() {
+        const modal = document.getElementById('modal-variant-picker');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        variantModalSlotId = null;
+      }
+
+      function selectExerciseVariant(slotId, variantName) {
+        const dayId = state.currentViewingDay;
+        const slot = PROGRAM_DAYS[dayId].slots.find(s => s.slotId === slotId);
+        state.selectedVariantsBySlot[slotId] = variantName;
+
+        // Actualizar el borrador activo de este slot cargando el historial específico de la nueva variante elegida
+        const lastRecord = state.exerciseHistoryByVariant[variantName];
+        const newSets = [];
+        for (let i = 0; i < slot.setsCount; i++) {
+          const fallbackWeight = slot.defaultWeights[i] !== undefined ? slot.defaultWeights[i] : slot.defaultWeights[0];
+          const prevSet = lastRecord && lastRecord.sets && lastRecord.sets[i] ? lastRecord.sets[i] : null;
+          newSets.push({
+            weight: prevSet ? prevSet.weight : fallbackWeight,
+            reps: prevSet ? prevSet.reps : slot.targetReps,
+            completed: false
+          });
+        }
+
+        state.activeDraftsByDay[dayId].exercises[slotId] = {
+          slotId,
+          variantName,
+          note: lastRecord && lastRecord.note ? lastRecord.note : '',
+          sets: newSets
+        };
+
+        saveState();
+        closeVariantModal();
+        renderWorkoutView();
+        showToast(`Variante cambiada a: ${variantName}`);
+      }
+
+      function addCustomVariant() {
+        if (!variantModalSlotId) return;
+        const input = document.getElementById('custom-variant-input');
+        const name = input.value.trim();
+        if (!name) return;
+
+        if (!state.customVariantsBySlot[variantModalSlotId]) {
+          state.customVariantsBySlot[variantModalSlotId] = [];
+        }
+        if (!state.customVariantsBySlot[variantModalSlotId].includes(name)) {
+          state.customVariantsBySlot[variantModalSlotId].push(name);
+        }
+        selectExerciseVariant(variantModalSlotId, name);
+      }
+
+      // ==========================================
+      // 7. GUARDAR SESIÓN Y AVANZAR ROTACIÓN
+      // ==========================================
+      function finishWorkoutSession() {
+        const dayId = state.currentViewingDay;
+        const draft = state.activeDraftsByDay[dayId];
+        const dayConfig = PROGRAM_DAYS[dayId];
+
+        // Contar cuántas series fueron marcadas como completadas
+        let completedSetsCount = 0;
+        Object.values(draft.exercises).forEach(ex => {
+          ex.sets.forEach(s => { if (s.completed) completedSetsCount++; });
+        });
+
+        if (completedSetsCount === 0) {
+          openConfirmModal(
+            'Ninguna serie marcada',
+            'No has tildado ninguna serie como completada. ¿Deseas marcar automáticamente todas las series con los pesos en pantalla y guardar el entrenamiento?',
+            () => {
+              Object.values(draft.exercises).forEach(ex => {
+                ex.sets.forEach(s => { s.completed = true; });
+              });
+              commitWorkoutSession(dayId);
+            }
+          );
+          return;
+        }
+
+        commitWorkoutSession(dayId);
+      }
+
+      function commitWorkoutSession(dayId) {
+        const draft = state.activeDraftsByDay[dayId];
+        const dayConfig = PROGRAM_DAYS[dayId];
+        const todayISO = new Date().toISOString().split('T')[0];
+
+        // Número de ronda para este día específico (ej. Ronda 1, Ronda 2...)
+        const previousSameDaySessions = state.workoutSessions.filter(s => s.dayId === dayId).length;
+        const roundNumber = previousSameDaySessions + 1;
+
+        const sessionExercises = dayConfig.slots.map(slot => {
+          const exDraft = draft.exercises[slot.slotId];
+          // Guardar en el diccionario histórico de esa variante para la próxima vez
+          state.exerciseHistoryByVariant[exDraft.variantName] = {
+            sets: exDraft.sets.map(s => ({ weight: s.weight, reps: s.reps, completed: true })),
+            note: exDraft.note || '',
+            date: todayISO
+          };
+
+          return {
+            slotId: slot.slotId,
+            type: slot.type,
+            variantName: exDraft.variantName,
+            note: exDraft.note || '',
+            sets: exDraft.sets.map(s => ({ ...s }))
+          };
+        });
+
+        const newSession = {
+          id: 'sess_' + Date.now(),
+          date: todayISO,
+          timestamp: Date.now(),
+          dayId,
+          dayName: dayConfig.name,
+          roundNumber,
+          generalNote: draft.generalNote || '',
+          exercises: sessionExercises
+        };
+
+        state.workoutSessions.unshift(newSession);
+
+        // Avanzar rotación automáticamente (A -> B -> C -> D -> A)
+        const currentIdx = DAY_ROTATION_ORDER.indexOf(dayId);
+        const nextDay = DAY_ROTATION_ORDER[(currentIdx + 1) % DAY_ROTATION_ORDER.length];
+        state.nextDayInRotation = nextDay;
+        state.currentViewingDay = nextDay;
+
+        // Preparar un nuevo borrador limpio para el día recién entrenado con los pesos recién guardados
+        state.activeDraftsByDay[dayId] = createDraftForDay(dayId);
+
+        stopTimer();
+        saveState();
+        renderAll();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast(`¡${dayConfig.shortTitle} guardado! Próximo: Día ${nextDay}`);
+      }
+
+      function resetActiveDraft() {
+        const dayId = state.currentViewingDay;
+        openConfirmModal(
+          'Reiniciar series del día',
+          `¿Quieres desmarcar las series actuales del Día ${dayId} y recargar los pesos de la última sesión guardada?`,
+          () => {
+            state.activeDraftsByDay[dayId] = createDraftForDay(dayId);
+            saveState();
+            renderWorkoutView();
+            showToast('Series reiniciadas');
+          }
+        );
+      }
+
+      // ==========================================
+      // 8. RENDERIZADO DE LA INTERFAZ (UI)
+      // ==========================================
+      function renderAll() {
+        renderHeader();
+        renderWorkoutView();
+        renderHistoryView();
+        renderBodyweightView();
+        renderSettingsView();
+        lucide.createIcons();
+      }
+
+      function renderHeader() {
+        // Calcular ronda general basada en sesiones realizadas
+        const totalSessions = state.workoutSessions.length;
+        const currentCycleRound = Math.floor(totalSessions / 4) + 1;
+
+        document.getElementById('header-next-badge').textContent = `Ronda #${currentCycleRound} • Sig: Día ${state.nextDayInRotation}`;
+
+        // Botones de paso (1.25 / 2.5 / 5 kg)
+        [1.25, 2.5, 5].forEach(val => {
+          const btn = document.getElementById(`step-btn-${val}`);
+          if (btn) {
+            if (state.weightStep === val) {
+              btn.className = 'step-btn px-2 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-500 text-zinc-950 shadow transition-all';
+            } else {
+              btn.className = 'step-btn px-2 py-1 rounded-lg text-xs font-mono font-semibold text-zinc-400 hover:text-zinc-200 transition-all';
+            }
+          }
+        });
+      }
+
+      function renderWorkoutView() {
+        const dayId = state.currentViewingDay;
+        const dayConfig = PROGRAM_DAYS[dayId];
+        const draft = state.activeDraftsByDay[dayId];
+
+        // 1. Renderizar Selector de Día (A / B / C / D)
+        const selectorGrid = document.getElementById('day-selector-grid');
+        selectorGrid.innerHTML = DAY_ROTATION_ORDER.map(dKey => {
+          const dObj = PROGRAM_DAYS[dKey];
+          const isSelected = dKey === dayId;
+          const isNextSuggested = dKey === state.nextDayInRotation;
+
+          return `
+            <button
+              onclick="App.selectWorkoutDay('${dKey}')"
+              class="relative py-2.5 px-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center ${
+                isSelected
+                  ? 'bg-zinc-800/95 border-emerald-500/60 text-white shadow-lg'
+                  : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:text-zinc-200'
+              }"
+            >
+              ${isNextSuggested ? `
+                <span class="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500 text-zinc-950 mb-0.5">
+                  SIGUIENTE
+                </span>
+              ` : `<span class="text-[9px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5">ROTACIÓN</span>`}
+              <span class="font-extrabold text-sm leading-tight">Día ${dKey}</span>
+              <span class="text-[11px] text-zinc-400 truncate max-w-full mt-0.5">${dObj.focus}</span>
+            </button>
+          `;
+        }).join('');
+
+        // 2. Resumen del Día Activo y Progreso de Series
+        document.getElementById('active-day-title').textContent = dayConfig.name;
+        const lastSameDaySession = state.workoutSessions.find(s => s.dayId === dayId);
+        document.getElementById('active-day-last-date').textContent = lastSameDaySession
+          ? `Última sesión Día ${dayId}: ${formatHumanDate(lastSameDaySession.date)} (Ronda #${lastSameDaySession.roundNumber})`
+          : `Listo para registrar tu primera sesión del Día ${dayId}`;
+
+        let totalSets = 0;
+        let doneSets = 0;
+        dayConfig.slots.forEach(slot => {
+          const exDraft = draft.exercises[slot.slotId];
+          exDraft.sets.forEach(s => {
+            totalSets++;
+            if (s.completed) doneSets++;
+          });
+        });
+
+        document.getElementById('session-progress-text').textContent = `${doneSets}/${totalSets}`;
+        const pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+        document.getElementById('session-progress-bar').style.width = `${pct}%`;
+
+        // 3. Renderizar Tarjetas de Ejercicios (Fuerza 3x5 vs BBB 5x10 / Asistencias)
+        const container = document.getElementById('exercises-container');
+        container.innerHTML = dayConfig.slots.map((slot, slotIdx) => {
+          const exDraft = draft.exercises[slot.slotId];
+          const lastRefString = formatLastSessionReference(slot, exDraft.variantName);
+          const lastRecord = state.exerciseHistoryByVariant[exDraft.variantName];
+          const completedInEx = exDraft.sets.filter(s => s.completed).length;
+          const allExDone = completedInEx === slot.setsCount;
+
+          // Colores de insignia según tipo de bloque
+          let badgeStyle = 'bg-zinc-800 text-zinc-300 border-zinc-700';
+          if (slot.type === 'strength') badgeStyle = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+          if (slot.type === 'bbb') badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+          if (slot.type === 'assist' || slot.type === 'core') badgeStyle = 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+
+          // Renderizado diferenciado:
+          // A) Para Fuerza (3x5): Filas amplias individuales porque cada serie suele subir de peso (ej. 20 - 20 - 22.5 kg)
+          // B) Para BBB y Asistencias (5x10): Control rápido propagado + Grilla de 5 botones táctiles grandes
+          let setsMarkup = '';
+
+          if (slot.type === 'strength') {
+            setsMarkup = `
+              <div class="space-y-2 mt-3">
+                ${exDraft.sets.map((setObj, sIdx) => {
+                  const prevWeight = lastRecord && lastRecord.sets && lastRecord.sets[sIdx] ? lastRecord.sets[sIdx].weight : null;
+                  return `
+                    <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl border transition-all ${
+                      setObj.completed
+                        ? 'bg-emerald-950/30 border-emerald-500/40'
+                        : 'bg-zinc-950/80 border-zinc-800/90'
+                    }">
+                      <div class="flex items-center gap-2.5">
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold ${
+                          setObj.completed ? 'bg-emerald-500 text-zinc-950' : 'bg-zinc-800 text-zinc-400'
+                        }">
+                          S${sIdx + 1}
+                        </span>
+                        <div>
+                          <span class="text-[11px] text-zinc-400 block">
+                            ${prevWeight !== null ? `Ant: <strong class="font-mono text-zinc-300">${prevWeight} kg</strong>` : 'Serie de fuerza'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Controles +/- sin teclado + toque central para edición manual -->
+                      <div class="flex items-center gap-1.5">
+                        <button
+                          onclick="App.adjustSetWeight('${dayId}', '${slot.slotId}', ${sIdx}, -1)"
+                          class="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-mono font-bold text-base flex items-center justify-center border border-zinc-700/80"
+                        >−</button>
+
+                        <button
+                          onclick="App.openManualEditModal('${dayId}', '${slot.slotId}', ${sIdx})"
+                          class="min-w-[88px] h-10 px-2.5 rounded-xl bg-zinc-900 border border-zinc-700/80 flex flex-col items-center justify-center active:scale-95"
+                          title="Toca para editar con teclado"
+                        >
+                          <span class="font-mono font-extrabold text-sm text-white leading-none">${setObj.weight} <span class="text-[11px] font-normal text-zinc-400">kg</span></span>
+                          <span class="font-mono text-[10px] text-emerald-400 mt-0.5">× ${setObj.reps} reps</span>
+                        </button>
+
+                        <button
+                          onclick="App.adjustSetWeight('${dayId}', '${slot.slotId}', ${sIdx}, 1)"
+                          class="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-mono font-bold text-base flex items-center justify-center border border-zinc-700/80"
+                        >+</button>
+                      </div>
+
+                      <!-- Botón Táctil Grande Check -->
+                      <button
+                        onclick="App.toggleSetComplete('${dayId}', '${slot.slotId}', ${sIdx})"
+                        class="h-11 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+                          setObj.completed
+                            ? 'bg-emerald-500 text-zinc-950 shadow-md shadow-emerald-950/60'
+                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
+                        }"
+                      >
+                        <i data-lucide="check" class="w-5 h-5 stroke-[2.5]"></i>
+                      </button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `;
+          } else {
+            // Bloque 5x10 (BBB o Asistencias): Barra de ajuste rápido de carga + 5 botones grandes de serie
+            const refSet = exDraft.sets.find(s => !s.completed) || exDraft.sets[0];
+            setsMarkup = `
+              <div class="mt-3 space-y-2.5">
+                <!-- Barra rápida de peso que propaga a las 5 series -->
+                <div class="flex items-center justify-between bg-zinc-950/90 border border-zinc-800/90 rounded-xl p-2">
+                  <div class="flex items-center gap-2 pl-1">
+                    <span class="text-xs font-semibold text-zinc-400">Carga 5×${slot.targetReps}:</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      onclick="App.adjustExerciseBulkWeight('${dayId}', '${slot.slotId}', -1)"
+                      class="w-10 h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-mono font-bold text-base flex items-center justify-center border border-zinc-700"
+                    >−</button>
+
+                    <button
+                      onclick="App.openManualEditModal('${dayId}', '${slot.slotId}', 0)"
+                      class="min-w-[96px] h-9 px-3 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center gap-1 active:scale-95"
+                    >
+                      <span class="font-mono font-extrabold text-sm text-white">${refSet.weight}</span>
+                      <span class="text-xs text-zinc-400">kg</span>
+                      <i data-lucide="pencil" class="w-3 h-3 text-zinc-500 ml-1"></i>
+                    </button>
+
+                    <button
+                      onclick="App.adjustExerciseBulkWeight('${dayId}', '${slot.slotId}', 1)"
+                      class="w-10 h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-mono font-bold text-base flex items-center justify-center border border-zinc-700"
+                    >+</button>
+                  </div>
+                </div>
+
+                <!-- 5 Botones Táctiles Grandes para completar cada serie con un toque -->
+                <div class="grid grid-cols-5 gap-1.5">
+                  ${exDraft.sets.map((setObj, sIdx) => `
+                    <div class="flex flex-col">
+                      <button
+                        onclick="App.toggleSetComplete('${dayId}', '${slot.slotId}', ${sIdx})"
+                        class="h-14 rounded-xl border flex flex-col items-center justify-center transition-all active:scale-95 ${
+                          setObj.completed
+                            ? 'bg-emerald-500 border-emerald-400 text-zinc-950 shadow-md shadow-emerald-950/50'
+                            : 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:border-zinc-700'
+                        }"
+                      >
+                        <span class="text-[10px] font-bold uppercase tracking-wider ${setObj.completed ? 'text-zinc-900' : 'text-zinc-400'}">
+                          S${sIdx + 1}
+                        </span>
+                        <span class="font-mono font-extrabold text-sm leading-tight mt-0.5">
+                          ${setObj.weight}<span class="text-[10px] font-normal">kg</span>
+                        </span>
+                        <span class="text-[10px] font-mono ${setObj.completed ? 'text-zinc-900 font-bold' : 'text-zinc-400'}">
+                          ×${setObj.reps}
+                        </span>
+                      </button>
+                      <button
+                        onclick="App.openManualEditModal('${dayId}', '${slot.slotId}', ${sIdx})"
+                        class="text-[10px] text-zinc-400 hover:text-zinc-300 py-1 text-center"
+                      >
+                        editar
+                      </button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          return `
+            <article class="bg-zinc-900/95 border ${allExDone ? 'border-emerald-500/40' : 'border-zinc-800/90'} rounded-2xl p-3.5 shadow-lg transition-all">
+              <!-- Cabecera de tarjeta: Nombre clicable para cambiar variante + insignia + timer preset -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeStyle}">
+                      ${slot.badge}
+                    </span>
+                    <button
+                      onclick="App.startRestTimer(${slot.restSeconds}, '${exDraft.variantName.replace(/'/g, "\\'")}', '${slot.badge}')"
+                      class="text-[11px] font-mono text-zinc-400 hover:text-emerald-400 flex items-center gap-1 bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800"
+                    >
+                      <i data-lucide="timer" class="w-3 h-3"></i>
+                      ${Math.floor(slot.restSeconds / 60)}:${String(slot.restSeconds % 60).padStart(2, '0')}
+                    </button>
+                  </div>
+
+                  <!-- Botón para cambiar variante de ejercicio sin perder historial -->
+                  <button
+                    onclick="App.openVariantModal('${slot.slotId}')"
+                    class="mt-1.5 group flex items-center gap-1.5 text-left max-w-full"
+                    title="Cambiar ejercicio equivalente"
+                  >
+                    <h3 class="font-extrabold text-base text-white group-hover:text-emerald-400 transition-colors truncate">
+                      ${exDraft.variantName}
+                    </h3>
+                    <span class="p-1 rounded-lg bg-zinc-800/80 text-zinc-400 group-hover:text-emerald-400 shrink-0">
+                      <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
+                    </span>
+                  </button>
+
+                  <!-- Referencia clara de la última ronda -->
+                  <p class="text-xs font-mono text-emerald-400/90 mt-0.5">
+                    ${lastRefString}
+                  </p>
+                </div>
+
+                <!-- Contador de series completadas del ejercicio -->
+                <button
+                  onclick="App.completeAllSetsInExercise('${dayId}', '${slot.slotId}')"
+                  class="px-2.5 py-1.5 rounded-xl font-mono text-xs font-bold border transition-all shrink-0 ${
+                    allExDone
+                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                  }"
+                  title="Marcar/desmarcar todas"
+                >
+                  ${completedInEx}/${slot.setsCount} ✓
+                </button>
+              </div>
+
+              <!-- Series (3x5 o 5x10) -->
+              ${setsMarkup}
+
+              <!-- Notas rápidas y Chips de un toque por ejercicio -->
+              <div class="mt-3 pt-2.5 border-t border-zinc-800/80 space-y-2">
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                  ${QUICK_NOTE_CHIPS.map(chip => {
+                    const isChipActive = (exDraft.note || '').includes(chip);
+                    return `
+                      <button
+                        onclick="App.toggleNoteChip('${dayId}', '${slot.slotId}', '${chip}')"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 border transition-all ${
+                          isChipActive
+                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                        }"
+                      >
+                        ${chip}
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+                <div class="relative">
+                  <input
+                    type="text"
+                    value="${(exDraft.note || '').replace(/"/g, '&quot;')}"
+                    oninput="App.updateExerciseNote('${dayId}', '${slot.slotId}', this.value)"
+                    placeholder="Nota rápida (ej. Flojo, Subir próxima, Barra 15kg...)"
+                    class="w-full bg-zinc-950/70 border border-zinc-800/90 rounded-xl pl-3 pr-3 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        document.getElementById('session-general-note').value = draft.generalNote || '';
+        lucide.createIcons();
+      }
+
+      // ==========================================
+      // 9. HISTORIAL DE RONDAS (VISTA EXCEL & LISTA)
+      // ==========================================
+      function setHistorySubView(subView) {
+        state.historySubView = subView;
+        saveState();
+        renderHistoryView();
+      }
+
+      function setMatrixFilterDay(dayFilter) {
+        state.matrixFilterDay = dayFilter;
+        saveState();
+        renderHistoryView();
+      }
+
+      function renderHistoryView() {
+        const isMatrix = state.historySubView === 'matrix';
+        const tabMatrix = document.getElementById('hist-tab-matrix');
+        const tabList = document.getElementById('hist-tab-list');
+        const matrixContainer = document.getElementById('history-matrix-container');
+        const listContainer = document.getElementById('history-list-container');
+        const filterRow = document.getElementById('matrix-day-filter');
+
+        if (isMatrix) {
+          tabMatrix.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all bg-zinc-800 text-white shadow';
+          tabList.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all text-zinc-400';
+          matrixContainer.classList.remove('hidden');
+          filterRow.classList.remove('hidden');
+          listContainer.classList.add('hidden');
+          renderExcelMatrix();
+        } else {
+          tabList.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all bg-zinc-800 text-white shadow';
+          tabMatrix.className = 'flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all text-zinc-400';
+          listContainer.classList.remove('hidden');
+          matrixContainer.classList.add('hidden');
+          filterRow.classList.add('hidden');
+          renderSessionsList();
+        }
+        lucide.createIcons();
+      }
+
+      // Renderiza las tablas estilo Planilla de Excel con columnas por Ronda (Ronda 1, Ronda 2, Ronda 3...)
+      function renderExcelMatrix() {
+        ['ALL', 'A', 'B', 'C', 'D'].forEach(key => {
+          const btn = document.getElementById(`matrix-filter-${key}`);
+          if (btn) {
+            btn.className = state.matrixFilterDay === key
+              ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold border bg-emerald-500 text-zinc-950 border-emerald-400 shrink-0 transition-all'
+              : 'px-3.5 py-1.5 rounded-xl text-xs font-bold border bg-zinc-900 text-zinc-400 border-zinc-800 shrink-0 transition-all';
+          }
+        });
+
+        const daysToRender = state.matrixFilterDay === 'ALL'
+          ? DAY_ROTATION_ORDER
+          : [state.matrixFilterDay];
+
+        const container = document.getElementById('history-matrix-container');
+
+        if (state.workoutSessions.length === 0) {
+          container.innerHTML = `
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-zinc-800 mx-auto flex items-center justify-center">
+                <i data-lucide="table-2" class="w-6 h-6 text-emerald-400"></i>
+              </div>
+              <h3 class="font-bold text-sm text-white">Aún no hay rondas guardadas</h3>
+              <p class="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                Al finalizar tus entrenamientos o cargar las rondas de demostración en la pestaña Backup, verás aquí las columnas comparativas igual que en tu Excel.
+              </p>
+              <button onclick="App.loadDemoHistory()" class="px-4 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs">
+                Cargar 3 Rondas de Ejemplo
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = daysToRender.map(dayKey => {
+          const dayConfig = PROGRAM_DAYS[dayKey];
+          // Sesiones de este día ordenadas cronológicamente (Ronda 1 -> Ronda N)
+          const daySessions = state.workoutSessions
+            .filter(s => s.dayId === dayKey)
+            .slice()
+            .reverse();
+
+          if (daySessions.length === 0) {
+            return `
+              <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-bold text-sm text-white">${dayConfig.name}</h3>
+                  <span class="text-xs text-zinc-500 font-mono">0 rondas</span>
+                </div>
+                <p class="text-xs text-zinc-400 mt-1">Sin sesiones registradas para este día todavía.</p>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg">
+              <div class="px-4 py-3 bg-zinc-950/60 border-b border-zinc-800 flex items-center justify-between">
+                <h3 class="font-extrabold text-sm text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  ${dayConfig.name}
+                </h3>
+                <span class="text-xs font-mono text-emerald-400 font-semibold">${daySessions.length} ${daySessions.length === 1 ? 'ronda' : 'rondas'}</span>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-zinc-800 bg-zinc-950/40 text-[11px] font-mono uppercase text-zinc-400">
+                      <th class="py-2.5 px-3 min-w-[150px] sticky left-0 bg-zinc-900 z-10 border-r border-zinc-800">Ejercicio</th>
+                      ${daySessions.map((sess, idx) => `
+                        <th class="py-2.5 px-3 min-w-[125px] border-r border-zinc-800/60">
+                          <div class="text-emerald-400 font-bold">Ronda #${idx + 1}</div>
+                          <div class="text-[10px] text-zinc-400 font-normal">${formatShortDate(sess.date)}</div>
+                        </th>
+                      `).join('')}
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-zinc-800/70 text-xs">
+                    ${dayConfig.slots.map(slot => {
+                      return `
+                        <tr class="hover:bg-zinc-800/30">
+                          <td class="py-2.5 px-3 font-semibold text-zinc-200 sticky left-0 bg-zinc-900 z-10 border-r border-zinc-800">
+                            <div class="text-[10px] font-mono text-zinc-400">${slot.badge}</div>
+                            <div class="truncate max-w-[145px]">${state.selectedVariantsBySlot[slot.slotId] || slot.defaultVariant}</div>
+                          </td>
+                          ${daySessions.map(sess => {
+                            const ex = sess.exercises.find(e => e.slotId === slot.slotId);
+                            if (!ex) return `<td class="py-2.5 px-3 text-zinc-500 font-mono">-</td>`;
+                            const weights = ex.sets.map(s => s.weight);
+                            const allSame = weights.every(w => w === weights[0]);
+                            const weightStr = slot.type === 'strength' || !allSame
+                              ? `${weights.join('-')} kg`
+                              : `${weights[0]} kg (${ex.sets.length}×${ex.sets[0]?.reps || 10})`;
+                            return `
+                              <td class="py-2.5 px-3 border-r border-zinc-800/60 align-top">
+                                <div class="font-mono font-bold text-white">${weightStr}</div>
+                                ${ex.VariantName !== slot.defaultVariant ? `<div class="text-[10px] text-zinc-400 truncate max-w-[120px]">${ex.variantName}</div>` : ''}
+                                ${ex.note ? `<div class="text-[10px] text-amber-300/90 mt-0.5 italic truncate max-w-[120px]">"${ex.note}"</div>` : ''}
+                              </td>
+                            `;
+                          }).join('')}
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderSessionsList() {
+        const container = document.getElementById('history-list-container');
+        if (state.workoutSessions.length === 0) {
+          container.innerHTML = `
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
+              <p class="text-xs text-zinc-400">No hay sesiones registradas todavía.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = state.workoutSessions.map(sess => `
+          <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-mono font-bold text-xs">
+                    Día ${sess.dayId} • Ronda #${sess.roundNumber}
+                  </span>
+                  <span class="text-xs text-zinc-400 font-mono">${formatHumanDate(sess.date)}</span>
+                </div>
+                <h4 class="font-bold text-sm text-white mt-1">${sess.dayName}</h4>
+              </div>
+              <button onclick="App.deleteWorkoutSession('${sess.id}')" class="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-zinc-800">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="space-y-1.5">
+              ${sess.exercises.map(ex => {
+                const wList = ex.sets.map(s => s.weight).join(' - ');
+                return `
+                  <div class="flex items-start justify-between text-xs py-1 border-b border-zinc-800/40 last:border-none">
+                    <div class="pr-2">
+                      <span class="font-semibold text-zinc-200">${ex.variantName}</span>
+                      ${ex.note ? `<span class="block text-[11px] text-amber-300/90 italic">Nota: ${ex.note}</span>` : ''}
+                    </div>
+                    <span class="font-mono font-bold text-emerald-400 shrink-0">${wList} kg</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            ${sess.generalNote ? `<p class="text-xs text-zinc-400 bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">💬 ${sess.generalNote}</p>` : ''}
+          </div>
+        `).join('');
+      }
+
+      function deleteWorkoutSession(sessId) {
+        openConfirmModal(
+          'Eliminar sesión del historial',
+          '¿Estás seguro de eliminar esta sesión guardada? Esta acción no se puede deshacer.',
+          () => {
+            state.workoutSessions = state.workoutSessions.filter(s => s.id !== sessId);
+            saveState();
+            renderAll();
+            showToast('Sesión eliminada');
+          }
+        );
+      }
+
+      // ==========================================
+      // 10. PESO CORPORAL (BODYWEIGHT)
+      // ==========================================
+      function renderBodyweightView() {
+        const dateInput = document.getElementById('bw-date-input');
+        if (!dateInput.value) {
+          dateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        const sorted = [...state.bodyweightLogs].sort((a, b) => b.date.localeCompare(a.date));
+        const badgeEl = document.getElementById('bw-current-badge');
+        const countEl = document.getElementById('bw-total-count');
+        const listEl = document.getElementById('bw-history-list');
+
+        countEl.textContent = `${sorted.length} ${sorted.length === 1 ? 'registro' : 'registros'}`;
+
+        if (sorted.length > 0) {
+          badgeEl.innerHTML = `
+            <span class="text-[10px] uppercase tracking-wider text-zinc-400 block">Actual</span>
+            <span class="font-mono font-extrabold text-lg text-emerald-400">${sorted[0].weight} kg</span>
+          `;
+        } else {
+          badgeEl.innerHTML = '';
+        }
+
+        if (sorted.length === 0) {
+          listEl.innerHTML = `<div class="p-6 text-center text-xs text-zinc-400">Sin registros de peso corporal.</div>`;
+          return;
+        }
+
+        listEl.innerHTML = sorted.map((entry, idx) => {
+          const prevEntry = sorted[idx + 1];
+          let diffBadge = '';
+          if (prevEntry) {
+            const diff = Number((entry.weight - prevEntry.weight).toFixed(1));
+            const sign = diff > 0 ? '+' : '';
+            const color = diff > 0 ? 'text-emerald-400 bg-emerald-500/10' : (diff < 0 ? 'text-sky-400 bg-sky-500/10' : 'text-zinc-400 bg-zinc-800');
+            diffBadge = `<span class="text-xs font-mono px-2 py-0.5 rounded-md ${color}">${sign}${diff} kg</span>`;
+          }
+
+          return `
+            <div class="px-4 py-3 flex items-center justify-between">
+              <div>
+                <span class="font-mono font-bold text-sm text-white">${entry.weight} kg</span>
+                <span class="text-xs text-zinc-400 block">${formatHumanDate(entry.date)}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                ${diffBadge}
+                <button onclick="App.deleteBodyweightEntry('${entry.id}')" class="p-1.5 text-zinc-400 hover:text-rose-400">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function addBodyweightEntry() {
+        const dateVal = document.getElementById('bw-date-input').value || new Date().toISOString().split('T')[0];
+        const weightInput = document.getElementById('bw-weight-input');
+        const weightVal = parseFloat(weightInput.value);
+
+        if (!weightVal || weightVal <= 20 || weightVal > 350) {
+          showToast('Ingresa un peso válido en kg');
+          return;
+        }
+
+        state.bodyweightLogs.push({
+          id: 'bw_' + Date.now(),
+          date: dateVal,
+          weight: Number(weightVal.toFixed(1))
+        });
+
+        weightInput.value = '';
+        saveState();
+        renderBodyweightView();
+        lucide.createIcons();
+        showToast('Peso corporal registrado');
+      }
+
+      function deleteBodyweightEntry(id) {
+        state.bodyweightLogs = state.bodyweightLogs.filter(b => b.id !== id);
+        saveState();
+        renderBodyweightView();
+        lucide.createIcons();
+      }
+
+      // ==========================================
+      // 11. CONFIGURACIÓN, BACKUP JSON Y DEMO
+      // ==========================================
+      function renderSettingsView() {
+        const nextBtns = document.getElementById('settings-next-day-btns');
+        nextBtns.innerHTML = DAY_ROTATION_ORDER.map(dKey => {
+          const active = state.nextDayInRotation === dKey;
+          return `
+            <button
+              onclick="App.setNextRotationDay('${dKey}')"
+              class="w-9 h-9 rounded-xl font-mono font-bold text-xs border transition-all ${
+                active
+                  ? 'bg-emerald-500 text-zinc-950 border-emerald-400 shadow'
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+              }"
+            >
+              ${dKey}
+            </button>
+          `;
+        }).join('');
+
+        const soundBtn = document.getElementById('sound-toggle-btn');
+        soundBtn.textContent = state.soundEnabled ? 'Activado 🔔' : 'Silenciado 🔕';
+        soundBtn.className = state.soundEnabled
+          ? 'px-3.5 py-2 rounded-xl text-xs font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-300 transition-all'
+          : 'px-3.5 py-2 rounded-xl text-xs font-bold border bg-zinc-800 border-zinc-700 text-zinc-400 transition-all';
+      }
+
+      function setNextRotationDay(dayKey) {
+        state.nextDayInRotation = dayKey;
+        state.currentViewingDay = dayKey;
+        saveState();
+        renderAll();
+        showToast(`Siguiente entrenamiento fijado en Día ${dayKey}`);
+      }
+
+      function toggleSound() {
+        state.soundEnabled = !state.soundEnabled;
+        saveState();
+        renderSettingsView();
+        if (state.soundEnabled) playCheckTick();
+      }
+
+      function exportBackupJSON() {
+        const dataStr = JSON.stringify(state, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStamp = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `bbb_gym_backup_${dateStamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Backup JSON descargado');
+      }
+
+      function importBackupJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const imported = JSON.parse(e.target.result);
+            if (!imported || typeof imported !== 'object') throw new Error('Formato inválido');
+            state = { ...state, ...imported };
+            saveState();
+            renderAll();
+            showToast('Backup restaurado con éxito');
+          } catch (err) {
+            showToast('Error al leer el archivo JSON');
+          }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+      }
+
+      function loadDemoHistory() {
+        const today = new Date();
+        const fmtDate = (daysAgo) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - daysAgo);
+          return d.toISOString().split('T')[0];
+        };
+
+        const demoSessions = [];
+        // Generar 2 rondas completas para A, B, C, D con progresión realista
+        [1, 2].forEach(roundNum => {
+          DAY_ROTATION_ORDER.forEach((dayKey, dIdx) => {
+            const dayConfig = PROGRAM_DAYS[dayKey];
+            const daysAgo = (3 - roundNum) * 10 - dIdx * 2;
+            const bonusKg = (roundNum - 1) * 2.5;
+
+            const exercises = dayConfig.slots.map(slot => {
+              const variantName = state.selectedVariantsBySlot[slot.slotId] || slot.defaultVariant;
+              const sets = slot.defaultWeights.map(w => ({
+                weight: w > 0 ? w + bonusKg : 0,
+                reps: slot.targetReps,
+                completed: true
+              }));
+
+              state.exerciseHistoryByVariant[variantName] = {
+                sets,
+                note: roundNum === 2 && slot.type === 'strength' ? 'Subir próxima 📈' : 'Buena técnica ✅',
+                date: fmtDate(daysAgo)
+              };
+
+              return {
+                slotId: slot.slotId,
+                type: slot.type,
+                variantName,
+                note: roundNum === 2 && slot.type === 'strength' ? 'Subir próxima 📈' : '',
+                sets
+              };
+            });
+
+            demoSessions.unshift({
+              id: `demo_${roundNum}_${dayKey}`,
+              date: fmtDate(daysAgo),
+              timestamp: Date.now() - daysAgo * 86400000,
+              dayId: dayKey,
+              dayName: dayConfig.name,
+              roundNumber: roundNum,
+              generalNote: `Ronda #${roundNum} completada con buena energía`,
+              exercises
+            });
+          });
+        });
+
+        state.workoutSessions = demoSessions;
+        DAY_ROTATION_ORDER.forEach(dKey => {
+          state.activeDraftsByDay[dKey] = createDraftForDay(dKey);
+        });
+
+        saveState();
+        renderAll();
+        switchTab('history');
+        showToast('2 Rondas completas (8 sesiones) cargadas');
+      }
+
+      function openConfirmResetModal() {
+        openConfirmModal(
+          'Borrar todo el progreso',
+          'Se eliminarán todas las rondas, notas y registros de peso corporal del teléfono. Asegúrate de haber exportado un Backup JSON si deseas conservarlos.',
+          () => {
+            localStorage.removeItem(STORAGE_KEY);
+            window.location.reload();
+          }
+        );
+      }
+
+      // ==========================================
+      // 12. NAVEGACIÓN Y UTILIDADES DE UI
+      // ==========================================
+      function switchTab(tabName) {
+        state.activeTab = tabName;
+        ['workout', 'history', 'bodyweight', 'settings'].forEach(t => {
+          const section = document.getElementById(`view-${t}`);
+          const navBtn = document.getElementById(`nav-${t}`);
+          if (t === tabName) {
+            section.classList.remove('hidden');
+            navBtn.className = 'nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-emerald-400 transition-colors';
+          } else {
+            section.classList.add('hidden');
+            navBtn.className = 'nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors';
+          }
+        });
+        renderAll();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function openConfirmModal(title, message, onConfirmCallback) {
+        document.getElementById('confirm-modal-title').textContent = title;
+        document.getElementById('confirm-modal-message').textContent = message;
+        const actionBtn = document.getElementById('confirm-modal-action-btn');
+        actionBtn.onclick = () => {
+          closeConfirmModal();
+          onConfirmCallback();
+        };
+        const modal = document.getElementById('modal-confirm');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeConfirmModal() {
+        const modal = document.getElementById('modal-confirm');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      function showToast(msg) {
+        const container = document.getElementById('toast-container');
+        const text = document.getElementById('toast-message');
+        text.textContent = msg;
+        container.classList.remove('hidden');
+        setTimeout(() => {
+          container.classList.add('hidden');
+        }, 2400);
+      }
+
+      function formatHumanDate(isoDate) {
+        if (!isoDate) return '';
+        const parts = isoDate.split('-');
+        if (parts.length !== 3) return isoDate;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      function formatShortDate(isoDate) {
+        if (!isoDate) return '';
+        const parts = isoDate.split('-');
+        if (parts.length !== 3) return isoDate;
+        return `${parts[2]}/${parts[1]}`;
+      }
+
+      function init() {
+        loadState();
+        renderAll();
+      }
+
+      return {
+        init,
+        switchTab,
+        setWeightStep,
+        selectWorkoutDay,
+        toggleSetComplete,
+        adjustSetWeight,
+        adjustExerciseBulkWeight,
+        completeAllSetsInExercise,
+        updateExerciseNote,
+        toggleNoteChip,
+        updateGeneralNote,
+        openManualEditModal,
+        closeManualEditModal,
+        saveManualEditModal,
+        openVariantModal,
+        closeVariantModal,
+        selectExerciseVariant,
+        addCustomVariant,
+        finishWorkoutSession,
+        resetActiveDraft,
+        startRestTimer,
+        adjustTimer,
+        stopTimer,
+        setHistorySubView,
+        setMatrixFilterDay,
+        deleteWorkoutSession,
+        addBodyweightEntry,
+        deleteBodyweightEntry,
+        setNextRotationDay,
+        toggleSound,
+        exportBackupJSON,
+        importBackupJSON,
+        loadDemoHistory,
+        openConfirmResetModal,
+        closeConfirmModal
+      };
+    })();
+
+    window.addEventListener('DOMContentLoaded', App.init);
+  </script>
+</body>
+</html>
